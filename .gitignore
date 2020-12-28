@@ -1,1 +1,3 @@
-files/**
+files/wordlists/*
+files/shellcodes/*
+files/exploits/*
