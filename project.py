@@ -44,6 +44,7 @@ from nmapThings import *
 from networkThings import *
 from databaseThings import *
 from gobusterThings import *
+from ftpThings import *
 
 def main(): 
 
@@ -54,6 +55,7 @@ def main():
     network = networkThings()
     db = databaseThings()
     gb = gobusterThings()
+    ftp = ftpThings()
 
     ## check tables for existens 
     db.checkTables()
@@ -182,10 +184,9 @@ def main():
                                     else:
                                         print("no directory found")
                                         input()
-                                except KeyboardInterrupt:
-                                    print()
-                                    print("stopped scanning")
                                     time.sleep(0.5)
+                                except:
+                                    pass
                             else:
                                 pass
                         else:
@@ -203,6 +204,34 @@ def main():
                             elif int(answer) in range(1, len(machines) + 1):
                                 ip = machines[int(answer)-1]['ip']
                                 port = machines[int(answer)-1]['port']
+                                name = machines[int(answer)-1]['name']
+
+                                print(f"Checking for anonymous login on {ip}")
+
+                                if ftp.checkAnonymousLogin(ip, port):
+                                    print(f"Anonymous login is allowed")
+                                    db.addCred(ip, proto, port, "", "")
+                                else:
+                                    print(f"Anonymous login is not allowed")
+                                    username = input("please enter username for bruteforcing: ")
+
+                                    if username:
+                                        result = ftp.bruteForce(ip, port, username, db.getWordlist('rockyou.txt'))
+                                        if result:
+                                            username = result[0]
+                                            password = result[1]
+
+                                            db.addCred(ip, name, port, username, password)
+                                            ftp.listFiles(host=ip, port=port, username=username, password=password)
+                                            time.sleep(0.5)
+                                            break
+                                        else:
+                                            print(f"creds could not found :/")
+                                            time.sleep(0.5)
+                                            break
+                                    else:
+                                        time.sleep(0.5)
+                                        break
                         else:
                             print("No host found that has ftp")
                             time.sleep(1)

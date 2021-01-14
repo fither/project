@@ -10,6 +10,7 @@ class databaseThings:
 		self.shellcodesTable = "shellcodes"
 		self.wordlistsTable = "wordlists"
 		self.webDirectoriesTable = "webdirectories"
+		self.credsTable = "creds"
 
 	def getTables(self):
 		self.tables = [
@@ -19,7 +20,8 @@ class databaseThings:
 			[self.exploitsTable, ["ip", "port", "exploit_name", "path", "desc"]],
 			[self.shellcodesTable, ["ip", "port", "shellcode_name", "path", "desc"]],
 			[self.wordlistsTable, ["name", "path"]],
-			[self.webDirectoriesTable, ["ip", "port", "path"]]
+			[self.webDirectoriesTable, ["ip", "port", "path"]],
+			[self.credsTable, ["ip", "proto", "port", "username", "password"]]
 		]
 
 		return self.tables
@@ -271,3 +273,38 @@ class databaseThings:
 		conn.close()
 
 		return dirs
+
+	def addCred(self, ip, proto, port, username, password):
+		conn = sqlite3.connect(self.dbName)
+		c = conn.cursor()
+
+		creds = getCreds(ip, proto, port)
+
+		credExist = False
+
+		for cred in creds:
+			if username == cred[3] and password == cred[4]:
+				credExist = True
+
+		if credExist:
+			# already found
+			pass
+		else:
+			c.execute(f"INSERT INTO {self.credsTable} VALUES(?, ?, ?, ?, ?)", (ip, proto, port, username, password))
+
+		conn.commit()
+		conn.close()
+
+	def getCreds(self, ip, proto, port):
+		conn = sqlite3.connect(self.dbName)
+		c = conn.cursor()
+
+		creds = []
+
+		for row in c.execute(f"SELECT ip, proto, port, username, password FROM {self.credsTable} WHERE ip='{ip} and proto='{proto}' and port='{port}'"):
+			creds.append(row)
+
+		conn.commit()
+		conn.close()
+
+		return creds

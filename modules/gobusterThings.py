@@ -33,5 +33,10 @@ class gobusterThings:
 			else:
 				print("website is not reachable")
 		except requests.exceptions.ConnectionError as err:
+			print()
 			print(f"can not connect -> {err}")
+		except KeyboardInterrupt:
+			print()
+			print(f"stopped scanning")
+
 		return dirs
